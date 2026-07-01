@@ -1,0 +1,29 @@
+{
+  "name": "order-management-ai",
+  "version": "1.0.0",
+  "description": "SAP CAP Order Management with AI Assistance",
+  "license": "UNLICENSED",
+  "private": true,
+  "dependencies": {
+    "@sap/cds": "^9",
+    "@cap-js/sqlite": "^2.4",
+    "express": "^5.2.1",
+    "uuid": "^9.0.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "start": "cds run",
+    "build": "cds build --production",
+    "watch": "cds watch"
+  },
+  "cds": {
+    "requires": {
+      "db": {
+        "kind": "sqlite",
+        "credentials": {
+          "url": "db.sqlite"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,10 @@
+Item_ID,Order_ID,ItemNumber,ProductName,Quantity,UnitPrice,Amount
+1,1,000010,Printer Cartridge,2,10,20
+2,2,000010,Toner Cartridge,1,30,30
+3,3,000010,Printer Ink,4,5,20
+4,4,000010,Maintenance Kit,1,40,40
+5,5,000010,Paper Tray,2,15,30
+6,6,000010,Drum Unit,1,50,50
+7,7,000010,Fuser Unit,1,60,60
+8,8,000010,Transfer Belt,1,70,70
+9,9,000010,Imaging Unit,2,35,70
