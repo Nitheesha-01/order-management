@@ -286,6 +286,7 @@ Revenue: $${totalAmount.toFixed(2)}`;
       }
     });
 
+    
     //     this.on('getAIAnalysis', async (req) => {
 
     //       const { question } = req.data;
