@@ -389,8 +389,8 @@
         </div>
 
         <div class="actions">
-            <button class="btn-primary" onclick="loadOrders()">🔄 Refresh</button>
-            <button class="btn-secondary" onclick="openCreateOrderModal()">➕ New Order</button>
+            <!-- <button class="btn-primary" onclick="loadOrders()">🔄 Refresh</button> -->
+            <!-- // <button class="btn-secondary" onclick="openCreateOrderModal()">➕ New Order</button> -->
             <button class="btn-ai" onclick="openAIModal()">🤖 Ask AI Assistant</button>
         </div>
 
@@ -446,7 +446,7 @@
                 <p>Analyzing data...</p>
             </div>
             <div id="aiChatBox" style="
-    max-height: 300px; 
+    max-height: 400px; 
     overflow-y: auto; 
     border: 1px solid #ddd; 
     padding: 10px; 
@@ -463,37 +463,43 @@
             <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #ddd;">
                 <h4 style="margin-top: 0; color: #0b5cad;">💡 Example Questions:</h4>
                 <ul class="example-list">
-                    <li onclick="setQuestion('How many total orders do we have?')">
-                        How many total orders do we have?
+
+                    <li onclick="setQuestion('How many active and cancelled orders do we have?')">
+                        How many active and cancelled orders do we have?
                     </li>
 
-                    <li onclick="setQuestion('What is the total revenue?')">
-                        What is the total revenue?
+                    <li onclick="setQuestion('Show details of cancelled orders')">
+                        Show details of cancelled orders
                     </li>
 
-                    <li onclick="setQuestion('How many orders are active and cancelled?')">
-                        Active vs cancelled orders
+                    <li onclick="setQuestion('Show details of active orders')">
+                        Show details of active orders
                     </li>
 
-                    <li onclick="setQuestion('How many orders per country?')">
-                        Orders per country
+                    <li onclick="setQuestion('Which customer generated the highest revenue?')">
+                        Which customer generated the highest revenue?
                     </li>
 
-                    <li onclick="setQuestion('Which country has the most orders?')">
-                        Top country
+                    <li onclick="setQuestion('Show all orders for model DCPL2550DW')">
+                        Show all orders for model DCPL2550DW
                     </li>
 
-                    <li onclick="setQuestion('Which customer placed the most orders?')">
-                        Top customer
+                    <li onclick="setQuestion('How many orders were placed for model HLL2325DW?')">
+                        How many orders were placed for model HLL2325DW?
                     </li>
 
-                    <li onclick="setQuestion('Which models are ordered?')">
-                        Product models
+                    <li onclick="setQuestion('Which country has the highest revenue?')">
+                        Which country has the highest revenue?
                     </li>
 
-                    <li onclick="setQuestion('What is the average order amount?')">
-                        Average order value
+                    <li onclick="setQuestion('What is the average order value?')">
+                        What is the average order value?
                     </li>
+
+                    <li onclick="setQuestion('Provide an overall business summary')">
+                        Provide an overall business summary
+                    </li>
+
                 </ul>
             </div>
         </div>
@@ -687,9 +693,25 @@
 
             // ✅ Show user question
             chatBox.innerHTML += `
-        <div style="margin-bottom:10px;">
-            <b>🧑 You:</b> ${question}
-        </div>
+<div style="
+    background:#eef6ff;
+    border-left:4px solid #ff6b35;
+    padding:10px;
+    margin-bottom:10px;
+    border-radius:6px;
+">
+
+    <div style="
+        font-weight:bold;
+        color:#ff6b35;
+        margin-bottom:5px;
+    ">
+        Question
+    </div>
+
+    ${question}
+
+</div>
     `;
 
             // ✅ Clear input
@@ -706,16 +728,30 @@
 
                 // ✅ Show AI answer
                 chatBox.innerHTML += `
-            <div style="margin-bottom:15px; padding-left:10px;">
-                <b>🤖 AI:</b><br>
-                ${data.answer}
-                <div style="font-size:12px; margin-top:5px; color:#555;">
-                    Orders: ${data.orderCount} | 
-                    Active: ${data.activeCount} | 
-                    Cancelled: ${data.cancelledCount} | 
-                    Revenue: $${data.totalAmount}
-                </div>
-            </div>
+<div style="
+    background:#f8f9fa;
+    border-left:4px solid #0b5cad;
+    padding:12px;
+    margin-bottom:15px;
+    border-radius:6px;
+">
+
+    <div style="
+        font-weight:bold;
+        color:#0b5cad;
+        margin-bottom:8px;
+    ">
+        Order Analytics Assistant
+    </div>
+
+    <div style="
+        line-height:1.6;
+        white-space:pre-line;
+    ">
+        ${data.answer}
+    </div>
+
+</div>
         `;
 
                 // ✅ Auto scroll

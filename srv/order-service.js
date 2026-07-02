@@ -6,153 +6,428 @@ class OrderService extends cds.ApplicationService {
   async init() {
 
     // ✅ Entities
-    const { Orders, OrderItems } = cds.entities('order.management');
+    const { Orders, OrderItems, BusinessPartners } =
+      cds.entities('order.management');
 
     // ====================================================
     // ✅ AI ANALYSIS FUNCTION (UPDATED - FULL LOGIC)
     // ====================================================
+
     this.on('getAIAnalysis', async (req) => {
 
       const { question } = req.data;
       const q = (question || '').toLowerCase();
 
       try {
+
         const orders = await SELECT.from(Orders);
         const items = await SELECT.from(OrderItems);
+        const bps = await SELECT.from(BusinessPartners);
 
-        // ✅ Basic Calculations
         const totalOrders = orders.length;
         const cancelledCount = orders.filter(o => o.Cancelled).length;
         const activeCount = totalOrders - cancelledCount;
 
-        const totalAmount = items.reduce((sum, i) => {
-          return sum + (parseFloat(i.Amount) || 0);
+        const totalAmount = items.reduce((sum, item) => {
+          return sum + (parseFloat(item.Amount) || 0);
         }, 0);
 
         let answer = '';
 
-        // ====================================================
-        // ✅ SMART AI RESPONSES (NEW LOGIC)
-        // ====================================================
+        // ==========================================
+        // Active vs Cancelled Orders
+        // ==========================================
 
-        // ✅ 1. Total Orders
-        if (q.includes('total order')) {
-          answer = `📊 There are ${totalOrders} total orders in the system.`;
-        }
+        if (
+          q.includes('active and cancelled') ||
+          q.includes('active orders') && q.includes('cancelled orders')
+        ) {
 
-        // ✅ 2. Revenue
-        else if (q.includes('revenue') || q.includes('amount')) {
-          answer = `💰 Total revenue is $${totalAmount.toFixed(2)} across all orders.`;
-        }
-
-        // ✅ 3. Active vs Cancelled
-        else if (q.includes('active') || q.includes('cancel')) {
-          answer = `📈 Out of ${totalOrders} orders:
-• Active: ${activeCount}
-• Cancelled: ${cancelledCount}`;
-        }
-
-        // ✅ 4. Country Breakdown
-        else if (q.includes('country')) {
-          const countryMap = {};
-          orders.forEach(o => {
-            countryMap[o.Country] = (countryMap[o.Country] || 0) + 1;
-          });
-
-          const breakdown = Object.entries(countryMap)
-            .map(([c, v]) => `${c}: ${v}`)
+          const activeOrders = orders
+            .filter(o => !o.Cancelled)
+            .map(o => o.OrderNumber)
             .join(', ');
 
-          answer = `🌍 Orders by country → ${breakdown}`;
-        }
-
-        // ✅ 5. Top Country
-        else if (q.includes('most orders')) {
-          const countryMap = {};
-          orders.forEach(o => {
-            countryMap[o.Country] = (countryMap[o.Country] || 0) + 1;
-          });
-
-          const top = Object.entries(countryMap)
-            .sort((a, b) => b[1] - a[1])[0];
-
-          answer = `🏆 ${top[0]} has the most orders (${top[1]} orders).`;
-        }
-
-        // ✅ 6. Top Customer
-        else if (q.includes('customer')) {
-          const customerMap = {};
-          orders.forEach(o => {
-            customerMap[o.Email] = (customerMap[o.Email] || 0) + 1;
-          });
-
-          const top = Object.entries(customerMap)
-            .sort((a, b) => b[1] - a[1])[0];
-
-          answer = `👤 Top customer is ${top[0]} with ${top[1]} orders.`;
-        }
-
-        // ✅ 7. Models
-        else if (q.includes('model') || q.includes('product')) {
-          const modelMap = {};
-          orders.forEach(o => {
-            modelMap[o.Model] = (modelMap[o.Model] || 0) + 1;
-          });
-
-          const models = Object.entries(modelMap)
-            .map(([m, c]) => `${m} (${c})`)
-            .join(', ');
-
-          answer = `📦 Ordered models → ${models}`;
-        }
-
-        // ✅ 8. Average Order Value
-        else if (q.includes('average')) {
-          const avg = totalAmount / totalOrders;
-          answer = `📊 Average order value is $${avg.toFixed(2)}.`;
-        }
-
-        // ✅ 9. Cancelled Orders List
-        else if (q.includes('which orders were cancelled')) {
-          const cancelledList = orders
+          const cancelledOrders = orders
             .filter(o => o.Cancelled)
             .map(o => o.OrderNumber)
             .join(', ');
 
-          answer = `❌ Cancelled orders: ${cancelledList}`;
+          answer =
+            `Order Status Summary
+
+Total Orders     : ${totalOrders}
+Active Orders    : ${activeCount}
+Cancelled Orders : ${cancelledCount}
+
+Active Order Numbers
+${activeOrders}
+
+Cancelled Order Numbers
+${cancelledOrders}`;
+
         }
 
-        // ✅ Default Response
+        // ==========================================
+        // Cancelled Details
+        // ==========================================
+
+        else if (q.includes('cancelled details') || q.includes('details of cancelled')) {
+
+          answer = orders
+            .filter(o => o.Cancelled)
+            .map(o =>
+              `Order: ${o.OrderNumber}
+Model: ${o.Model}
+Country: ${o.Country}
+Email: ${o.Email}`)
+            .join('\n\n');
+        }
+
+        // ==========================================
+        // Active Details
+        // ==========================================
+
+        else if (q.includes('details of active')) {
+
+          answer = orders
+            .filter(o => !o.Cancelled)
+            .map(o =>
+
+              `Order Number : ${o.OrderNumber}
+Model        : ${o.Model}
+Country      : ${o.Country}
+Customer     : ${o.Email}
+`)
+            .join('\n\n');
+        }
+
+        // ==========================================
+        // Search Model
+        // ==========================================
+
+        else if (q.includes('model')) {
+
+          const match = orders.filter(o =>
+            q.includes(o.Model.toLowerCase())
+          );
+
+          if (match.length > 0) {
+
+            answer = match
+              .map(o =>
+                `Order Details
+
+• Order Number : ${o.OrderNumber}
+• Model        : ${o.Model}
+• Country      : ${o.Country}
+• Customer     : ${o.Email}
+• Status       : ${o.OrderStatus}`)
+              .join('\n\n');
+
+          } else {
+
+            answer = 'No matching model found.';
+          }
+        }
+
+        // ==========================================
+        // Highest Revenue Customer
+        // ==========================================
+
+        else if (q.includes('customer generated the highest revenue')) {
+
+          const revenueByCustomer = {};
+
+          orders.forEach(order => {
+
+            const orderRevenue = items
+              .filter(i => i.Order_ID === order.Order_ID)
+              .reduce((sum, x) => sum + (parseFloat(x.Amount) || 0), 0);
+
+            revenueByCustomer[order.Email] =
+              (revenueByCustomer[order.Email] || 0) + orderRevenue;
+          });
+
+          const topCustomer =
+            Object.entries(revenueByCustomer)
+              .sort((a, b) => b[1] - a[1])[0];
+
+          answer =
+            `Customer Revenue Analysis
+
+Highest Revenue Customer
+
+Customer Email : ${topCustomer[0]}
+Revenue        : $${topCustomer[1].toFixed(2)}
+`;
+        }
+
+        // ==========================================
+        // Country Revenue
+        // ==========================================
+
+        else if (q.includes('country has the highest revenue')) {
+
+          const revenueMap = {};
+
+          orders.forEach(order => {
+
+            const revenue = items
+              .filter(i => i.Order_ID === order.Order_ID)
+              .reduce((sum, x) => sum + (parseFloat(x.Amount) || 0), 0);
+
+            revenueMap[order.Country] =
+              (revenueMap[order.Country] || 0) + revenue;
+          });
+
+          const topCountry =
+            Object.entries(revenueMap)
+              .sort((a, b) => b[1] - a[1])[0];
+
+          answer =
+            `Country With Highest Revenue
+
+Country: ${topCountry[0]}
+Revenue: $${topCountry[1].toFixed(2)}`;
+        }
+
+        // ==========================================
+        // Average Order Value
+        // ==========================================
+
+        else if (q.includes('average order')) {
+
+          const avg = totalAmount / totalOrders;
+
+          answer =
+            `Average Order Value
+
+$${avg.toFixed(2)}`;
+        }
+
+        // ==========================================
+        // Total Orders
+        // ==========================================
+
+        else if (q.includes('total order')) {
+
+          answer =
+            `There are ${totalOrders} total orders in the system.`;
+
+        }
+
+        // ==========================================
+        // Revenue
+        // ==========================================
+
+        else if (q.includes('revenue')) {
+
+
+          nswer = `Total revenue is $${totalAmount.toFixed(2)} across all orders.`;
+
+        }
+
+        else if (
+          q.includes('overall business summary') ||
+          q.includes('dashboard summary')
+        ) {
+
+          answer =
+            `Executive Summary
+
+Total Orders     : ${totalOrders}
+Active Orders    : ${activeCount}
+Cancelled Orders : ${cancelledCount}
+Revenue          : $${totalAmount.toFixed(2)}
+
+Key Insights
+
+• Active Orders : ${activeCount}
+• Cancelled Orders : ${cancelledCount}
+• Average Order Value : $${(totalAmount / totalOrders).toFixed(2)}
+`;
+
+
+        }
+
         else {
-          answer = `📊 Summary:
-• Total Orders: ${totalOrders}
-• Active: ${activeCount}
-• Cancelled: ${cancelledCount}
-• Revenue: $${totalAmount.toFixed(2)}`;
+
+          answer =
+            `Summary
+
+Total Orders: ${totalOrders}
+Active Orders: ${activeCount}
+Cancelled Orders: ${cancelledCount}
+Revenue: $${totalAmount.toFixed(2)}`;
         }
 
         return {
           question,
           answer,
           orderCount: totalOrders,
-          cancelledCount,
           activeCount,
+          cancelledCount,
           totalAmount
         };
 
       } catch (error) {
-        console.error('AI Error:', error);
+
+        console.error("AI ERROR:", error);
 
         return {
           question,
-          answer: 'Error processing request',
+          answer: error.message,
           orderCount: 0,
-          cancelledCount: 0,
           activeCount: 0,
+          cancelledCount: 0,
           totalAmount: 0
         };
       }
     });
+
+    //     this.on('getAIAnalysis', async (req) => {
+
+    //       const { question } = req.data;
+    //       const q = (question || '').toLowerCase();
+
+    //       try {
+    //         const orders = await SELECT.from(Orders);
+    //         const items = await SELECT.from(OrderItems);
+
+    //         // ✅ Basic Calculations
+    //         const totalOrders = orders.length;
+    //         const cancelledCount = orders.filter(o => o.Cancelled).length;
+    //         const activeCount = totalOrders - cancelledCount;
+
+    //         const totalAmount = items.reduce((sum, i) => {
+    //           return sum + (parseFloat(i.Amount) || 0);
+    //         }, 0);
+
+    //         let answer = '';
+
+    //         // ====================================================
+    //         // ✅ SMART AI RESPONSES (NEW LOGIC)
+    //         // ====================================================
+
+    //         // ✅ 1. Total Orders
+    //         if (q.includes('total order')) {
+    //           answer = `📊 There are ${totalOrders} total orders in the system.`;
+    //         }
+
+    //         // ✅ 2. Revenue
+    //         else if (q.includes('revenue') || q.includes('amount')) {
+    //           answer = `💰 Total revenue is $${totalAmount.toFixed(2)} across all orders.`;
+    //         }
+
+    //         // ✅ 3. Active vs Cancelled
+    //         else if (q.includes('active') || q.includes('cancel')) {
+    //           answer = `📈 Out of ${totalOrders} orders:
+    // • Active: ${activeCount}
+    // • Cancelled: ${cancelledCount}`;
+    //         }
+
+    //         // ✅ 4. Country Breakdown
+    //         else if (q.includes('country')) {
+    //           const countryMap = {};
+    //           orders.forEach(o => {
+    //             countryMap[o.Country] = (countryMap[o.Country] || 0) + 1;
+    //           });
+
+    //           const breakdown = Object.entries(countryMap)
+    //             .map(([c, v]) => `${c}: ${v}`)
+    //             .join(', ');
+
+    //           answer = `🌍 Orders by country → ${breakdown}`;
+    //         }
+
+    //         // ✅ 5. Top Country
+    //         else if (q.includes('most orders')) {
+    //           const countryMap = {};
+    //           orders.forEach(o => {
+    //             countryMap[o.Country] = (countryMap[o.Country] || 0) + 1;
+    //           });
+
+    //           const top = Object.entries(countryMap)
+    //             .sort((a, b) => b[1] - a[1])[0];
+
+    //           answer = `🏆 ${top[0]} has the most orders (${top[1]} orders).`;
+    //         }
+
+    //         // ✅ 6. Top Customer
+    //         else if (q.includes('customer')) {
+    //           const customerMap = {};
+    //           orders.forEach(o => {
+    //             customerMap[o.Email] = (customerMap[o.Email] || 0) + 1;
+    //           });
+
+    //           const top = Object.entries(customerMap)
+    //             .sort((a, b) => b[1] - a[1])[0];
+
+    //           answer = `👤 Top customer is ${top[0]} with ${top[1]} orders.`;
+    //         }
+
+    //         // ✅ 7. Models
+    //         else if (q.includes('model') || q.includes('product')) {
+    //           const modelMap = {};
+    //           orders.forEach(o => {
+    //             modelMap[o.Model] = (modelMap[o.Model] || 0) + 1;
+    //           });
+
+    //           const models = Object.entries(modelMap)
+    //             .map(([m, c]) => `${m} (${c})`)
+    //             .join(', ');
+
+    //           answer = `📦 Ordered models → ${models}`;
+    //         }
+
+    //         // ✅ 8. Average Order Value
+    //         else if (q.includes('average')) {
+    //           const avg = totalAmount / totalOrders;
+    //           answer = `📊 Average order value is $${avg.toFixed(2)}.`;
+    //         }
+
+    //         // ✅ 9. Cancelled Orders List
+    //         else if (q.includes('which orders were cancelled')) {
+    //           const cancelledList = orders
+    //             .filter(o => o.Cancelled)
+    //             .map(o => o.OrderNumber)
+    //             .join(', ');
+
+    //           answer = `❌ Cancelled orders: ${cancelledList}`;
+    //         }
+
+    //         // ✅ Default Response
+    //         else {
+    //           answer = `📊 Summary:
+    // • Total Orders: ${totalOrders}
+    // • Active: ${activeCount}
+    // • Cancelled: ${cancelledCount}
+    // • Revenue: $${totalAmount.toFixed(2)}`;
+    //         }
+
+    //         return {
+    //           question,
+    //           answer,
+    //           orderCount: totalOrders,
+    //           cancelledCount,
+    //           activeCount,
+    //           totalAmount
+    //         };
+
+    //       } catch (error) {
+    //         console.error('AI Error:', error);
+
+    //         return {
+    //           question,
+    //           answer: 'Error processing request',
+    //           orderCount: 0,
+    //           cancelledCount: 0,
+    //           activeCount: 0,
+    //           totalAmount: 0
+    //         };
+    //       }
+    //     });
 
     // ====================================================
     // ✅ GET STATISTICS (NO CHANGE)
