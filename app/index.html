@@ -780,6 +780,48 @@ border-radius:5px;">
 
 </div>
         `;
+        //////
+// ✅ Always show matched records
+if (data.matchedOrders && data.matchedOrders.length > 0) {
+  chatBox.innerHTML += `
+    <div style="margin-top:10px; padding:10px; background:#eef6ff; border-radius:6px;">
+      <strong>Matched Record:</strong>
+      <table style="width:100%; border-collapse:collapse; margin-top:8px;">
+        <thead>
+          <tr><th>Order Number</th><th>Model</th><th>Country</th><th>Status</th><th>Amount</th></tr>
+        </thead>
+        <tbody>
+          ${data.matchedOrders.map(o => `
+            <tr>
+              <td>${o.OrderNumber}</td>
+              <td>${o.Model}</td>
+              <td>${o.Country}</td>
+              <td>${o.OrderStatus}</td>
+              <td>${o.Amount}</td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+
+
+// ✅ Optional: Highlight rows in main Fiori table
+function highlightOrders(matchedOrders) {
+  const tableRows = document.querySelectorAll("#ordersTable tr");
+  tableRows.forEach(row => {
+    const orderNum = row.cells[0]?.innerText;
+    if (matchedOrders.some(o => o.OrderNumber === orderNum)) {
+      row.style.backgroundColor = "#d1ecf1"; // highlight
+    } else {
+      row.style.backgroundColor = "";
+    }
+  });
+}
+highlightOrders(data.matchedOrders);
+
+        ////
 
                 // ✅ Auto scroll
                 chatBox.scrollTop = chatBox.scrollHeight;

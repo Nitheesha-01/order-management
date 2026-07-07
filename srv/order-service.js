@@ -9,14 +9,7 @@ const groq = new OpenAI({
   baseURL: 'https://api.groq.com/openai/v1'
 });
 
-// const groq = new OpenAI({
-//   apiKey: process.env.GROQ_API_KEY,
-//   baseURL: 'https://api.groq.com/openai/v1'
-// });
-
-//console.log("AI RESPONSE:", cds.error);
 const { v4: uuid } = require('uuid');
-
 
 class OrderService extends cds.ApplicationService {
 
@@ -240,17 +233,59 @@ ${dataContext}
           history
         );
 
-        return {
-          question,
-          answer,
-          orderCount: orders.length,
-          activeCount: orders.filter(o => !o.Cancelled).length,
-          cancelledCount: orders.filter(o => o.Cancelled).length,
-          totalAmount: items.reduce(
-            (sum, i) => sum + (parseFloat(i.Amount) || 0),
-            0
-          )
-        };
+        // Extract order number from question (simple example)
+// Extract order number from question (example: "003")
+const orderMatch = question.match(/\b\d{3}\b/); 
+let matchedOrders = [];
+
+if (orderMatch) {
+  matchedOrders = normalizedOrders.filter(o => o.OrderNumber === orderMatch[0]);
+}
+
+// Example: also handle BP name queries
+const bpNameMatch = question.match(/show\s+(\w+)\s+bp/i);
+if (bpNameMatch) {
+  const name = bpNameMatch[1].toUpperCase();
+  matchedOrders = normalizedOrders.filter(o => 
+    o.FirstName?.toUpperCase() === name || o.LastName?.toUpperCase() === name
+  );
+}
+
+return {
+  question,
+  answer,
+  matchedOrders, // ✅ only exact records
+  orderCount: orders.length,
+  activeCount: orders.filter(o => !o.Cancelled).length,
+  cancelledCount: orders.filter(o => o.Cancelled).length,
+  totalAmount: items.reduce(
+    (sum, i) => sum + (parseFloat(i.Amount) || 0),
+    0
+  )
+};
+
+
+
+
+        // return {
+        //   question,
+        //   answer,
+        //   /////
+        //   matchedOrders: normalizedOrders,  
+        //   // matchedOrders: normalizedOrders.filter(o =>
+        //   //   answer.includes(o.OrderNumber) ||
+        //   //   answer.includes(o.Model) ||
+        //   //   answer.includes(o.Country)
+        //   // ),
+        //   ////
+        //   orderCount: orders.length,
+        //   activeCount: orders.filter(o => !o.Cancelled).length,
+        //   cancelledCount: orders.filter(o => o.Cancelled).length,
+        //   totalAmount: items.reduce(
+        //     (sum, i) => sum + (parseFloat(i.Amount) || 0),
+        //     0
+        //   )
+        // };
 
       } catch (error) {
 
