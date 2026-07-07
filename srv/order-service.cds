@@ -33,5 +33,5 @@ entity OrderItems       as projection on db.OrderItems;
         activeOrders    : Integer;
         cancelledOrders : Integer;
         totalAmount     : Decimal;
-    };
+    }; 
 }

@@ -23,6 +23,8 @@ class OrderService extends cds.ApplicationService {
     this.on('getAIAnalysis', async (req) => {
 
       const { question } = req.data;
+     
+      
       const sessionId =
         req.user?.id || "default-user";
       let history =
@@ -250,7 +252,19 @@ if (bpNameMatch) {
     o.FirstName?.toUpperCase() === name || o.LastName?.toUpperCase() === name
   );
 }
+////
 
+if (
+  question.toLowerCase().includes("download") ||
+    question.toLowerCase().includes("export") ||
+    question.toLowerCase().includes("excel")
+
+) {
+  matchedOrders = normalizedOrders;
+}
+
+
+////
 return {
   question,
   answer,

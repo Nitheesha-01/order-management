@@ -748,6 +748,38 @@ border-radius:5px;">
                 });
 
                 const data = await response.json();
+                ///
+
+// ✅ Download Excel if user requested it
+if (
+    question.toLowerCase().includes("download") ||
+    question.toLowerCase().includes("export") ||
+    question.toLowerCase().includes("excel")
+) {
+
+    exportOrdersToExcel();
+
+    document.getElementById(typingId)?.remove();
+
+    chatBox.innerHTML += `
+        <div style="
+            background:#d4edda;
+            color:#155724;
+            border-left:4px solid #28a745;
+            padding:12px;
+            margin-bottom:15px;
+            border-radius:6px;
+        ">
+            ✅ Orders.xlsx downloaded successfully.
+        </div>
+    `;
+
+    chatBox.scrollTop = chatBox.scrollHeight;
+
+    return;
+}
+
+                ///
 
                 document
                     .getElementById(typingId)
@@ -808,18 +840,27 @@ if (data.matchedOrders && data.matchedOrders.length > 0) {
 
 
 // ✅ Optional: Highlight rows in main Fiori table
-function highlightOrders(matchedOrders) {
-  const tableRows = document.querySelectorAll("#ordersTable tr");
-  tableRows.forEach(row => {
-    const orderNum = row.cells[0]?.innerText;
-    if (matchedOrders.some(o => o.OrderNumber === orderNum)) {
-      row.style.backgroundColor = "#d1ecf1"; // highlight
-    } else {
-      row.style.backgroundColor = "";
-    }
-  });
-}
-highlightOrders(data.matchedOrders);
+
+// function highlightOrders(matchedOrders) {
+//   const tableRows = document.querySelectorAll("#ordersTable tr");
+//   tableRows.forEach(row => {
+//     const orderNum = row.cells[0]?.innerText;
+//     if (matchedOrders.some(o => o.OrderNumber === orderNum)) {
+//       row.style.backgroundColor = "#d1ecf1"; // highlight
+//     } else {
+//       row.style.backgroundColor = "";
+//     }
+//   });
+// }
+
+// // Show Message
+// function showMessage(message, type) {
+   
+// }
+
+///
+// highlightOrders(data.matchedOrders);
+highlightOrders(data.matchedOrders || []);
 
         ////
 
@@ -831,6 +872,81 @@ highlightOrders(data.matchedOrders);
                 showMessage('Error: ' + error.message, 'error');
             }
         }
+        ////
+        
+function highlightOrders(matchedOrders) {
+
+    const tableRows =
+        document.querySelectorAll("#ordersTable tr");
+
+    tableRows.forEach(row => {
+
+        const orderNum =
+            row.cells[0]?.innerText;
+
+        if (
+            matchedOrders.some(
+                o => o.OrderNumber === orderNum
+            )
+        ) {
+            row.style.backgroundColor = "#d1ecf1";
+        } else {
+            row.style.backgroundColor = "";
+        }
+    });
+}
+
+function exportOrdersToExcel() {
+
+    const table =
+        document.querySelector("#ordersTable");
+
+    let csv = "";
+
+    // Header row
+    csv +=
+        "Order Number,Model,Created On,BP Number,First Name,Last Name,Email,Phone,Item Number,Cancelled Date,Status,Country,Amount\n";
+
+    const rows =
+        document.querySelectorAll("#ordersTable tr");
+
+    rows.forEach(row => {
+
+        const cols =
+            row.querySelectorAll("td");
+
+        if (cols.length > 0) {
+
+            const rowData =
+                Array.from(cols)
+                    .map(td =>
+                        `"${td.innerText.replace(/"/g, '""')}"`
+                    )
+                    .join(",");
+
+            csv += rowData + "\n";
+        }
+    });
+
+    const blob =
+        new Blob([csv], {
+            type: "text/csv"
+        });
+
+    const url =
+        window.URL.createObjectURL(blob);
+
+    const a =
+        document.createElement("a");
+
+    a.href = url;
+    a.download = "Orders.csv";
+    a.click();
+
+    window.URL.revokeObjectURL(url);
+}
+
+        ////
 
         // Set Question from Examples
         function setQuestion(question) {
