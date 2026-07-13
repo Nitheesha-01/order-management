@@ -23,8 +23,8 @@ class OrderService extends cds.ApplicationService {
     this.on('getAIAnalysis', async (req) => {
 
       const { question } = req.data;
-     
-      
+
+
       const sessionId =
         req.user?.id || "default-user";
       let history =
@@ -101,6 +101,14 @@ ${JSON.stringify(
           content: normalizedQuestion
         });
 
+        /////
+        const isDetailRequest =
+          normalizedQuestion.includes("DETAIL") ||
+          normalizedQuestion.includes("DETAILS") ||
+          normalizedQuestion.includes("FULL") ||
+          normalizedQuestion.includes("COMPLETE");
+        ///
+
         const completion = await groq.chat.completions.create({
 
           model: "llama-3.1-8b-instant",
@@ -112,6 +120,12 @@ ${JSON.stringify(
               role: "system",
               content: `
 You are a professional Order Analytics Assistant.
+Detail Mode: ${isDetailRequest ? "YES" : "NO"}
+ If Detail Mode = NO:
+ how only Order Number and Status.
+ If Detail Mode = YES:
+ show complete order details.
+
 
 Rules:
 
@@ -135,6 +149,13 @@ Rules:
     - Supporting Numbers
     - ORDER DATA
 12. Provide Business Insight only for summary or analytics questions.
+13. If the user asks for cancelled orders, active orders, or orders,
+        show only Order Number.
+14. Show full details only when the user explicitly asks for:
+       - details 
+       - full details      
+       - complete information  
+       - order details
 
 Examples:
 
@@ -167,36 +188,6 @@ Executive Summary
 Insight:
 Most orders are active and revenue is steady.
 `
-
-              //               content: `
-              // You are a professional Order Analytics Assistant.
-
-              // Your responsibilities:
-
-              // - Analyze order data
-              // - Generate business insights
-              // - Provide executive summaries
-              // - Provide customer, country, revenue and model analysis
-
-              // Rules:
-
-              // 1. Answer ONLY from provided records.
-              // 2. Never invent information.
-              // 3. Perform all matching case-insensitively.
-              // 4. Do not dump raw JSON or raw database records.
-              // 5. Present results in business-friendly language.
-              // 6. When users ask for details, provide a readable summary.
-              // 7. Always include insights whenever possible.
-              // 8. Use previous conversation context when answering.
-              // 9. Keep answers concise and executive-friendly.
-              // 10. Do not explain calculations unless explicitly requested.
-              // 11. Give the final result first.
-              // 12. For ranking questions (highest revenue, top customer, top country), return only:
-              //     - Name
-              //     - Value
-              //     - One-line insight
-              // 13. Avoid listing all records unless the user asks for details.
-              // `
             },
 
             {
@@ -236,70 +227,61 @@ ${dataContext}
         );
 
         // Extract order number from question (simple example)
-// Extract order number from question (example: "003")
-const orderMatch = question.match(/\b\d{3}\b/); 
-let matchedOrders = [];
+        // Extract order number from question (example: "003")
+        const orderMatch = question.match(/\b\d{3}\b/);
+        let matchedOrders = [];
 
-if (orderMatch) {
-  matchedOrders = normalizedOrders.filter(o => o.OrderNumber === orderMatch[0]);
-}
+        if (orderMatch) {
+          matchedOrders = normalizedOrders.filter(o => o.OrderNumber === orderMatch[0]);
+        }
 
-// Example: also handle BP name queries
-const bpNameMatch = question.match(/show\s+(\w+)\s+bp/i);
-if (bpNameMatch) {
-  const name = bpNameMatch[1].toUpperCase();
-  matchedOrders = normalizedOrders.filter(o => 
-    o.FirstName?.toUpperCase() === name || o.LastName?.toUpperCase() === name
-  );
-}
-////
+        // Example: also handle BP name queries
+        const bpNameMatch = question.match(/show\s+(\w+)\s+bp/i);
+        if (bpNameMatch) {
+          const name = bpNameMatch[1].toUpperCase();
+          matchedOrders = normalizedOrders.filter(o =>
+            o.FirstName?.toUpperCase() === name || o.LastName?.toUpperCase() === name
+          );
+        }
+        ////
 
-if (
-  question.toLowerCase().includes("download") ||
-    question.toLowerCase().includes("export") ||
-    question.toLowerCase().includes("excel")
+        if (
+          question.toLowerCase().includes("download") ||
+          question.toLowerCase().includes("export") ||
+          question.toLowerCase().includes("excel")
 
-) {
-  matchedOrders = normalizedOrders;
-}
+        ) {
+          matchedOrders = normalizedOrders;
+        }
+        /////
+        // ✅ Add this block just before the return
+        const activeOrdersList = normalizedOrders
+          .filter(o => !o.Cancelled)
+          .map(o => o.OrderNumber);
 
+        const cancelledOrdersList = normalizedOrders
+          .filter(o => o.Cancelled)
+          .map(o => o.OrderNumber);
 
-////
-return {
-  question,
-  answer,
-  matchedOrders, // ✅ only exact records
-  orderCount: orders.length,
-  activeCount: orders.filter(o => !o.Cancelled).length,
-  cancelledCount: orders.filter(o => o.Cancelled).length,
-  totalAmount: items.reduce(
-    (sum, i) => sum + (parseFloat(i.Amount) || 0),
-    0
-  )
-};
+        const formatVertical = (label, list) =>
+          `${label}: ${list[0]}\n               ${list.slice(1).join('\n               ')}`;
+       
+        // ✅ Final return object
+        return {
+          question,
+          answer,
+          matchedOrders,
+          activeOrdersFormatted: formatVertical("Active Orders", activeOrdersList),
+          cancelledOrdersFormatted: formatVertical("Cancelled Orders", cancelledOrdersList),
+          orderCount: orders.length,
+          activeCount: activeOrdersList.length,
+          cancelledCount: cancelledOrdersList.length,
+          totalAmount: items.reduce(
+            (sum, i) => sum + (parseFloat(i.Amount) || 0),
+            0
+          )
+        };
 
-
-
-
-        // return {
-        //   question,
-        //   answer,
-        //   /////
-        //   matchedOrders: normalizedOrders,  
-        //   // matchedOrders: normalizedOrders.filter(o =>
-        //   //   answer.includes(o.OrderNumber) ||
-        //   //   answer.includes(o.Model) ||
-        //   //   answer.includes(o.Country)
-        //   // ),
-        //   ////
-        //   orderCount: orders.length,
-        //   activeCount: orders.filter(o => !o.Cancelled).length,
-        //   cancelledCount: orders.filter(o => o.Cancelled).length,
-        //   totalAmount: items.reduce(
-        //     (sum, i) => sum + (parseFloat(i.Amount) || 0),
-        //     0
-        //   )
-        // };
 
       } catch (error) {
 
@@ -332,6 +314,105 @@ return {
         totalAmount: items.reduce((sum, i) => sum + (i.Amount || 0), 0)
       };
     });
+
+    // ====================================================
+    // ✅ GET FILTERED ORDERS (NEW)
+    // ====================================================
+    this.on('getFilteredOrders', async (req) => {
+
+      console.log("FILTER:", req.data);
+
+      let orders = await SELECT.from(Orders);
+
+      const items = await SELECT.from(OrderItems);
+
+      const bps = await SELECT.from(BusinessPartners);
+
+      const bpMap = {}; bps.forEach(bp => { bpMap[bp.BP_ID] = bp; });
+
+      const { status, country, startDate, endDate } = req.data;
+
+      if (status === "Active") {
+        orders = orders.filter(o => !o.Cancelled);
+      }
+
+      if (status === "Cancelled") {
+        orders = orders.filter(o => o.Cancelled);
+      }
+
+      if (country) {
+        orders = orders.filter(o => o.Country === country);
+      }
+
+      if (startDate) {
+        orders = orders.filter(o =>
+          new Date(o.CreatedOn) >= new Date(startDate)
+        );
+      }
+
+      if (endDate) {
+        orders = orders.filter(o =>
+          new Date(o.CreatedOn) <= new Date(endDate + "T23:59:59")
+        );
+      }
+
+      let totalAmount = 0;
+
+      const resultOrders = orders.map(order => {
+
+
+        const orderItems = items.filter(
+          i => i.Order_ID === order.Order_ID
+        );
+
+        const amount = orderItems.reduce(
+          (sum, i) => sum + (parseFloat(i.Amount) || 0),
+          0
+        );
+
+        totalAmount += amount;
+
+        const bp = bpMap[order.BP_ID] || {};
+
+        return {
+          OrderNumber: order.OrderNumber,
+          Model: order.Model,
+          CreatedOn: order.CreatedOn,
+          BPNumber: order.BP_ID,
+          FirstName: bp.FirstName || '-',
+          LastName: bp.LastName || '-',
+
+          // FirstName: "",
+          // LastName: "",
+          Email: order.Email,
+          Phone: order.Phone,
+          ItemNumber:
+            orderItems.length > 0
+              ? orderItems[0].ItemNumber
+              : "-",
+          CancelledDate:
+            order.Cancelled
+              ? order.CreatedOn
+              : "-",
+          OrderStatus: order.OrderStatus,
+          Country: order.Country,
+          Amount: amount.toFixed(2)
+        };
+      });
+
+      return {
+        totalOrders: resultOrders.length,
+        activeOrders: resultOrders.filter(
+          o => o.OrderStatus === "Active"
+        ).length,
+        cancelledOrders: resultOrders.filter(
+          o => o.OrderStatus === "Cancelled"
+        ).length,
+        totalAmount,
+        orders: resultOrders
+      };
+    });
+
 
     // ====================================================
     // ✅ CREATE ORDER
