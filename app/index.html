@@ -256,7 +256,7 @@
             top: 20px;
             right: 20px;
             width: 350px;
-            max-height: 60vh;
+            max-height: 90vh;
             overflow-y: auto;
 
             background: #ffffff;
@@ -459,16 +459,6 @@
             </div>
         </div>
 
-        <!-- Filter Bar -->
-        <!-- <div class="filter-bar"> -->
-        <!-- <select id="statusFilter">...</select> -->
-        <!-- <select id="countryFilter">...</select> -->
-        <!-- <input type="date" id="startDate"> to -->
-        <!-- <input type="date" id="endDate"> -->
-        <!-- <button class="btn-primary btn-small" onclick="applyFilters()">Apply Filters</button> -->
-        <!-- <button class="btn-ai" style="margin-left: auto;" onclick="openAIModal()">🤖 Ask AI Assistant</button> -->
-        <!-- <button class="btn-ai" style="margin-left: auto;" onclick="openAIModal()">🤖 Ask AI</button> -->
-        <!-- <button class="btn-ai btn-pill" style="margin-left: auto;" onclick="openAIModal()">🤖 Ask AI </button> -->
 
     </div>
     <h3 class="section-title">🔍 Order Filters</h3>
@@ -500,7 +490,7 @@
         <!-- filterbar end -->
 
         <div class="actions">
-            
+
         </div>
 
         <div id="errorMessage" class="error"></div>
@@ -550,6 +540,27 @@
             <button class="btn-ai" onclick="askAI()" style="width: 100%; justify-content: center;">Submit
                 Question</button>
 
+            <!-- voice assistance -->
+            <button class="btn-secondary" onclick="startVoiceInput()"
+                style="width: 100%; margin-top: 8px; justify-content: center;">
+                🎤 Speak Question
+            </button>
+            ``
+            <div id="voiceStatus" style="
+     text-align:center;
+     color:#0b5cad;
+     margin-top:8px;
+     font-weight:bold;">
+            </div>
+            <!--  -->
+            <div id="voiceStatus" style="
+     color:#0b5cad;
+     font-weight:bold;
+     text-align:center;
+     margin-top:10px;">
+            </div>
+
+
             <div id="loading" class="loading">
                 <div class="spinner"></div>
                 <p>Analyzing data...</p>
@@ -563,11 +574,7 @@
     background: #fafafa;
     margin-top: 10px;
 "></div>
-            <!-- <div id="aiResponse" class="ai-response">
-                <h3>📊 AI Response:</h3>
-                <p id="aiAnswer"></p>
-                <div class="stats-detail" id="statsDetail"></div>
-            </div> -->
+            
 
             <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #ddd;">
                 <h4 style="margin-top: 0; color: #0b5cad;">💡 Example Questions:</h4>
@@ -936,7 +943,7 @@ border-radius:5px;">
                 console.error('Error asking AI:', error);
                 showMessage('Error: ' + error.message, 'error');
             }
-        }       
+        }
 
         function highlightOrders(matchedOrders) {
 
@@ -1008,6 +1015,92 @@ border-radius:5px;">
             a.click();
 
             window.URL.revokeObjectURL(url);
+        }
+
+        // voice assistance
+
+
+        function startVoiceInput() {
+
+            const SpeechRecognition =
+                window.SpeechRecognition ||
+                window.webkitSpeechRecognition;
+
+            if (!SpeechRecognition) {
+                alert("Speech Recognition not supported");
+                return;
+            }
+
+            const recognition = new SpeechRecognition();
+
+            // Settings
+            recognition.lang = "en-US";
+            recognition.continuous = true;
+            recognition.interimResults = false;
+            recognition.maxAlternatives = 1;
+
+            recognition.start();
+
+            recognition.onstart = () => {
+
+                console.log("Voice Recognition Started");
+
+                document.getElementById("voiceStatus").innerHTML =
+                    "🎙️ Listening... Please speak";
+
+            };
+
+            recognition.onresult = (event) => {
+
+                console.log("Speech Detected");
+
+                const voiceText =
+                    event.results[0][0].transcript;
+
+                console.log("Voice Text:", voiceText);
+
+                document.getElementById("aiQuestion").value =
+                    voiceText;
+
+                document.getElementById("voiceStatus").innerHTML =
+                    "✅ Question Captured";
+
+                askAI();
+            };
+
+            recognition.onerror = (event) => {
+
+                console.error(
+                    "Speech Error:",
+                    event.error
+                );
+
+                if (event.error === "no-speech") {
+
+                    document.getElementById("voiceStatus").innerHTML =
+                        "🎤 No speech detected. Speak immediately after clicking.";
+
+                } else if (event.error === "audio-capture") {
+
+                    document.getElementById("voiceStatus").innerHTML =
+                        "🎤 Microphone not found.";
+
+                } else if (event.error === "not-allowed") {
+
+                    document.getElementById("voiceStatus").innerHTML =
+                        "🚫 Microphone permission denied.";
+
+                } else {
+
+                    document.getElementById("voiceStatus").innerHTML =
+                        "❌ " + event.error;
+                }
+            };
+
+            recognition.onend = () => {
+
+                console.log("Voice Recognition Ended");
+            };
         }
 
 
@@ -1146,24 +1239,35 @@ border-radius:5px;">
             }
 
             filteredOrders.forEach(order => {
+
                 const row = document.createElement('tr');
+
+                const statusBadge =
+                    order.OrderStatus === 'Cancelled'
+                        ? '<span class="badge badge-cancelled">Cancelled</span>'
+                        : '<span class="badge badge-active">Active</span>';
+
                 row.innerHTML = `
-                <td>${order.OrderNumber}</td>
-                <td>${order.Model}</td>
-                <td>${order.CreatedOn}</td>
-                <td>${order.BPNumber}</td>
-                <td>${order.FirstName}</td>
-                <td>${order.LastName}</td>
-                <td>${order.Email}</td>
-                <td>${order.Phone}</td>
-                <td>${order.ItemNumber}</td>
-                <td>${order.CancelledDate || "-"}</td>
-                <td>${order.OrderStatus}</td>
-                <td>${order.Country}</td>
-                <td>${order.Amount}</td>
-            `;
+        <td>${order.OrderNumber}</td>
+        <td>${order.Model}</td>
+        <td>${order.CreatedOn}</td>
+        <td>${order.BPNumber}</td>
+        <td>${order.FirstName}</td>
+        <td>${order.LastName}</td>
+        <td>${order.Email}</td>
+        <td>${order.Phone}</td>
+        <td>${order.ItemNumber}</td>
+        <td>${order.CancelledDate || "-"}</td>
+
+        <td>${statusBadge}</td>
+
+        <td>${order.Country}</td>
+        <td>${order.Amount}</td>
+    `;
+
                 tableBody.appendChild(row);
             });
+
         }
 
     </script>
